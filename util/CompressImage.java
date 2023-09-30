@@ -5,21 +5,21 @@ import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
-
 import javax.imageio.ImageIO;
 
 public class CompressImage {
     class QuadTree {
         class QuadTreeNode {
             int x, y, w, h;
-            Color averageColor;
+            int[] averageCbCr = new int[2];
             double error;
+            Color averageColor;
             int atDepth;
             QuadTreeNode tl, tr, bl, br;
             boolean isLeaf = false;
 
             public QuadTreeNode(BufferedImage image, int x, int y, int w, int h, int atDepth) {
-                if (w < 2 || h < 2) {
+                if (w <= 1 || h <= 1) {
                     return;
                 }
                 this.w = w;
@@ -27,6 +27,7 @@ public class CompressImage {
                 this.x = x;
                 this.y = y;
                 this.atDepth = atDepth;
+
                 long avgRed, avgBlue, avgGreen;
                 double redDeviation = 0, greenDeviation = 0, blueDeviation = 0;
 
@@ -65,16 +66,23 @@ public class CompressImage {
 
                     this.averageColor = new Color((int) (avgRed), (int) (avgGreen),
                             (int) (avgBlue));
-                    this.error = (Math.sqrt(redDeviation) * 0.2989 + Math.sqrt(greenDeviation) * 0.587
-                            + Math.sqrt(blueDeviation) * 0.114) / 3;
+                    this.error = (Math.sqrt(redDeviation) + Math.sqrt(greenDeviation)
+                            + Math.sqrt(blueDeviation)) / 3;
                 }
             }
 
+            private int splitDimension(int dimension) {
+                return dimension % 2 == 0 ? dimension / 2 : (dimension - 1) / 2;
+            }
+
             void split(BufferedImage image) {
-                this.tl = new QuadTreeNode(image, x, y, w / 2, h / 2, atDepth + 1);
-                this.tr = new QuadTreeNode(image, x + w / 2, y, w / 2, h / 2, atDepth + 1);
-                this.bl = new QuadTreeNode(image, x, y + h / 2, w / 2, h / 2, atDepth + 1);
-                this.br = new QuadTreeNode(image, x + w / 2, y + h / 2, w / 2, h / 2, atDepth + 1);
+                this.tl = new QuadTreeNode(image, x, y, splitDimension(w), splitDimension(h), atDepth + 1);
+                this.tr = new QuadTreeNode(image, x + splitDimension(w), y, splitDimension(w), splitDimension(h),
+                        atDepth + 1);
+                this.bl = new QuadTreeNode(image, x, y + splitDimension(h), splitDimension(w), splitDimension(h),
+                        atDepth + 1);
+                this.br = new QuadTreeNode(image, x + splitDimension(w), y + splitDimension(h), splitDimension(w),
+                        splitDimension(h), atDepth + 1);
             }
         }
 
@@ -93,9 +101,9 @@ public class CompressImage {
 
         private int findDepth(QuadTreeNode node) {
             if (node == null) {
-                return -1; // Base case: empty node has depth -1
-            } else if (node.tl == null) {
-                return 0; // Base case: leaf node has depth 0
+                return -1;
+            } else if (node.tl == null && node.tr == null && node.bl == null && node.br == null) {
+                return 0;
             } else {
                 int maxChildDepth = -1;
                 maxChildDepth = Math.max(maxChildDepth, findDepth(node.tl));
@@ -203,7 +211,8 @@ public class CompressImage {
     public void saveEdge(String outputPath, int edges) throws IOException {
         Graphics2D g2d = img.createGraphics();
         g2d.setColor(Color.BLACK);
-        g2d.fillRect(0, 0, img.getWidth(), img.getHeight());
+        g2d.fillRect(0, 0, img.getWidth() % 2 == 0 ? img.getWidth() : img.getWidth() - 1,
+                img.getHeight() % 2 == 0 ? img.getHeight() : img.getHeight() - 1);
         qt.renderEdges(img, edges);
         ImageIO.write(img, format, new File(outputPath));
     }
