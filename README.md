@@ -9,9 +9,6 @@
     <strong>Edge Detection:</strong> In addition to image compression, the program offers an edge detection feature. It can detect and highlight edges in the input image using edge detection algorithms, helping to emphasize important details in the image.
   </li>
   <li>
-  <strong>Decompression: </strong> You can also decompress the compressed image to retrieve the original image.
-  </li>  
-  <li>
     <strong>Customizable Compression Level: </strong> You can specify the compression level to control the trade-off between image quality and compression ratio.
   </li>
 </ul>
